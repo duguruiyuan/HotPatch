@@ -5,6 +5,6 @@ package com.lee.hotpatch;
  */
 public class Bug {
     public static String getText() {
-        return "bug is fixed";
+        return "bug is coming";
     }
 }
