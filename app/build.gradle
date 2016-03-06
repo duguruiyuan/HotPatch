@@ -1,0 +1,85 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
+
+    defaultConfig {
+        applicationId "com.lee.hotpatch"
+        minSdkVersion 8
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile project(':patchlib')
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:23.1.1'
+}
+
+apply plugin: 'com.lee.patch'
+
+
+patch {
+    /**
+     * Log Level
+     * 0 : Debug
+     * 1 : Info
+     * 2 : Error
+     */
+    logLevel = 0
+
+    /**
+     * the class type which will inject to the classes before dex
+     * which must be the class in hack.apk
+     */
+    hackType = 'Lcom/lee/hack/AntilazyLoad;'
+
+    /**
+     * If true, copy mapping file and compute hash file
+     * If false, compute classes which is different from the tag, and patch them into patch.apk
+     */
+    makeTag = false
+
+    /**
+     * the classes which never take part in hacking and patching
+     * Must contain application class, because we inject hack.apk when application create
+     */
+    excludeClasses = ['com.lee.hotpatch.MainApp']
+
+    /**
+     * the classes which never take part in hacking and patching
+     * Must contain com.lee.patch, we can not hack the patch lib.
+     */
+    excludePackages = ['com.lee.patchlib']
+}
+
+def cleanPatch = project.task("cleanPatch") << {
+    deleteFile new File("${project.projectDir}/patch")
+}
+
+def deleteFile(File f) {
+    if (f.exists()) {
+        if (f.isDirectory()) {
+            f.listFiles().each {
+                deleteFile it
+            }
+        }
+        f.delete()
+    }
+}
+
+project.tasks.findByName("clean").dependsOn cleanPatch

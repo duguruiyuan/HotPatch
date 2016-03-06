@@ -1,0 +1,1 @@
+include ':app', ':hack', ':plugin', ':patchlib'

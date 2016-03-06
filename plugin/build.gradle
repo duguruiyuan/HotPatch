@@ -1,0 +1,75 @@
+apply plugin: 'groovy'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+    compile "commons-io:commons-io:2.4"
+    compile 'commons-codec:commons-codec:1.10'
+}
+
+/*****************************************************************************************
+ * Maven Configuration
+ *****************************************************************************************/
+apply plugin: 'maven-publish'
+
+/**
+ * Warning: in order to publish the plugin, you need comment the plugin dependency in rootProject's buildScript
+ * Then:
+ * 1、You can publishToMavenLocal, and add mavenLocal() to rootProject's buildScript
+ * 2、You can publish to your custom maven repo, please set maven info in local.properties,
+ *   and then add maven{ url 'customRepoUrl'} to rootProject's buildScript
+ *
+ * After publish, uncomment the plugin dependency.
+ */
+def mavenRemoteUrl = ""
+def mavenUsername = ""
+def mavenPassword = ""
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId 'com.lee.patch'
+            artifactId 'gradle'
+            version '1.0.0-beta2'
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url mavenRemoteUrl
+            credentials {
+                username = mavenUsername
+                password = mavenPassword
+            }
+        }
+    }
+}
+
+project.afterEvaluate {
+    // read maven info from local.properties
+    File f = new File(project.rootProject.projectDir, "local.properties")
+    if (f.exists()) {
+        f.eachLine {
+            if (!it.startsWith("#")) {
+                String[] properties = it.split("=")
+                if (properties.length == 2) {
+                    switch (properties[0]) {
+                        case "mavenRemoteUrl":
+                            mavenRemoteUrl = properties[1]
+                            break
+                        case "mavenUsername":
+                            mavenUsername = properties[1]
+                            break
+                        case "mavenPassword":
+                            mavenPassword = properties[1]
+                            break
+                    }
+                }
+            }
+        }
+    }
+}
