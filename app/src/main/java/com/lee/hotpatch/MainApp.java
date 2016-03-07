@@ -3,6 +3,7 @@ package com.lee.hotpatch;
 import android.Manifest;
 import android.app.Application;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.support.v4.content.ContextCompat;
 
 import com.lee.patchlib.PatchUtils;
@@ -19,7 +20,7 @@ public class MainApp extends Application {
         super.onCreate();
         PatchUtils.getInstance().init(getApplicationContext());
         PatchUtils.getInstance().hack();
-        if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)) {
+        if (Build.VERSION.SDK_INT < 23 || PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)) {
             Utils.tryCopyPatch();
             PatchUtils.getInstance().patch();
         }
