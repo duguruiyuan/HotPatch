@@ -35,6 +35,12 @@ apply plugin: 'com.lee.patch'
 
 patch {
     /**
+     * If true, patch is working
+     * If false, patch is no effect
+     */
+    isEnable = false
+
+    /**
      * Log Level
      * 0 : Debug
      * 1 : Info
@@ -65,6 +71,16 @@ patch {
      * Must contain com.lee.patch, we can not hack the patch lib.
      */
     excludePackages = ['com.lee.patchlib']
+
+    /**
+     * if set sign configurations, the patch.apk will be signed
+     */
+    keyStorePath = ""
+    storePass = ""
+    keyPass = ""
+    alias = ""
+    digestAlgorithm = ""
+    signAlgorithm = ""
 }
 
 def cleanPatch = project.task("cleanPatch") << {

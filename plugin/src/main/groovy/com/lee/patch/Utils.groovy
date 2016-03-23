@@ -80,4 +80,8 @@ class Utils {
             // no-op
         }
     }
+
+    static boolean isEmpty(String s) {
+        return null == s || s.length() == 0
+    }
 }

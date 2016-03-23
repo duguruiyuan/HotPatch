@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
         try {
             while (klass != null) {
                 try {
-                    method = klass.getDeclaredMethod(methodName);
+                    method = klass.getDeclaredMethod(methodName, paramClasses);
                     if (null != method) {
                         method.setAccessible(true);
                         break;

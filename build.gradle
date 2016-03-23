@@ -12,7 +12,7 @@ buildscript {
          *
          * For more detail, please see the project(":plugin") and project(":app")
          */
-        classpath 'com.lee.patch:gradle:1.0.0-beta2'
+        classpath 'com.lee.patch:gradle:1.0.0-beta9'
     }
 }
 

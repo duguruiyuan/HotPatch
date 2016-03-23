@@ -27,6 +27,9 @@ class PatchPlugin implements Plugin<Project> {
 
         project.afterEvaluate {
             patchExtension = project.extensions.findByName("patch") as PatchExtension
+            if (!patchExtension.isEnable) {
+                return
+            }
             log = new Logger(level: patchExtension.logLevel, tag: "PatchPlugin")
             patchExtension.excludeClasses << Type.getType(patchExtension.hackType).getClassName()
             log.i("level:${patchExtension.logLevel}," +
@@ -126,10 +129,12 @@ class PatchPlugin implements Plugin<Project> {
                                             excludeClasses.remove(className)
                                             excludeClasses << mapClassName
                                         }
-                                        String packageName = className.substring(0, className.lastIndexOf("."))
-                                        if (patchExtension.excludePackages.contains(packageName)) {
-                                            patchExtension.excludePackages.remove(packageName)
-                                            patchExtension.excludePackages << mapClassName.substring(0, mapClassName.lastIndexOf("."))
+                                        if (className.lastIndexOf(".") != -1) {
+                                            String packageName = className.substring(0, className.lastIndexOf("."))
+                                            if (patchExtension.excludePackages.contains(packageName)) {
+                                                patchExtension.excludePackages.remove(packageName)
+                                                patchExtension.excludePackages << mapClassName.substring(0, mapClassName.lastIndexOf("."))
+                                            }
                                         }
                                     }
                                 }
@@ -233,7 +238,43 @@ class PatchPlugin implements Plugin<Project> {
                                     if (error) {
                                         println "dex error:" + error
                                     } else {
-                                        log.i("patch file : ${outDir.absolutePath}/${PATCH_FILE_NAME}")
+                                        // sign if need
+                                        if (!isEmpty(patchExtension.keyStorePath)
+                                                && !isEmpty(patchExtension.storePass)
+                                                && !isEmpty(patchExtension.keyPass)) {
+                                            def process
+                                            def signCmd = new String("jarsigner -verbose "
+                                                    + "-keystore ${patchExtension.keyStorePath} "
+                                                    + "-storepass ${patchExtension.storePass} "
+                                                    + "-keypass ${patchExtension.keyPass} "
+                                                    + "-signedjar "
+                                                    + mapToLocalPath("${outDir.absolutePath}/signed-${PATCH_FILE_NAME}") + " "
+                                                    + mapToLocalPath("${outDir.absolutePath}/${PATCH_FILE_NAME}") + " "
+                                                    + "${patchExtension.alias} "
+                                                    + "-digestalg ${patchExtension.digestAlgorithm} "
+                                                    + "-sigalg ${patchExtension.signAlgorithm}");
+                                            log.d(signCmd)
+                                            process = signCmd.execute()
+                                            if (process.waitFor() == 0) {
+                                                log.d("${process.text}")
+                                                // zip align
+                                                cmd = "${sdkDir}/build-tools/${project.android.buildToolsVersion}/zipalign${Os.isFamily(Os.FAMILY_WINDOWS) ? '.bat' : ''}"
+                                                def zipAlignCmd = new String("${cmd} "
+                                                        + "-v 4 "
+                                                        + mapToLocalPath("${outDir.absolutePath}/signed-${PATCH_FILE_NAME}") + " "
+                                                        + mapToLocalPath("${patchDirStr}/${PATCH_FILE_NAME}"))
+                                                log.d(zipAlignCmd)
+                                                process = zipAlignCmd.execute()
+                                                if (process.waitFor() == 0) {
+                                                    log.d("${process.text}")
+                                                    log.i("patch file : ${patchDirStr}/${PATCH_FILE_NAME}")
+                                                } else {
+                                                    log.e("failed to zipalign ${PATCH_FILE_NAME} : ${process.text}")
+                                                }
+                                            } else {
+                                                log.e("failed to sign ${PATCH_FILE_NAME} : ${process.text}")
+                                            }
+                                        }
                                     }
                                 } else {
                                     throw new IllegalArgumentException('$ANDROID_HOME is not defined')
@@ -264,7 +305,10 @@ class PatchPlugin implements Plugin<Project> {
                     jo.putNextEntry(newEntry)
                     byte[] buf = null;
                     if (entryName.endsWith(".class")) {
-                        String packageName = entryName.substring(0, entryName.lastIndexOf(File.separator))
+                        String packageName = ""
+                        if (entryName.lastIndexOf(File.separator) != -1) {
+                            packageName = entryName.substring(0, entryName.lastIndexOf(File.separator))
+                        }
                         if (!handledClassSet.contains(entryName)
                                 && !patchExtension.excludeClasses.contains(entryName.replaceAll(File.separator, "."))
                                 && !patchExtension.excludePackages.contains(packageName.replaceAll(File.separator, "."))
@@ -324,7 +368,10 @@ class PatchPlugin implements Plugin<Project> {
             try {
                 String path = classFile.absolutePath
                 String entryName = path.substring(path.indexOf(variantName) + variantName.length() + 1, path.length())
-                String packageName = entryName.substring(0, entryName.lastIndexOf(File.separator))
+                String packageName = ""
+                if (entryName.lastIndexOf(File.separator) != -1) {
+                    packageName = entryName.substring(0, entryName.lastIndexOf(File.separator))
+                }
                 String className = classFile.name
                 byte[] buf = null;
                 InputStream i = new FileInputStream(classFile)

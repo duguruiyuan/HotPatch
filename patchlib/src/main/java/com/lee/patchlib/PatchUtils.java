@@ -13,6 +13,8 @@ import java.io.OutputStream;
 public class PatchUtils {
     private static final String TAG = "PatchUtils";
 
+    public static final String PATCH_VERSION = "1.0";
+
     public static final String HACK_PATH = "hack";
     public static final String HACK_NAME = "hack.apk";
     public static final String PATCH_PATH = "patch";
@@ -21,6 +23,10 @@ public class PatchUtils {
     private static PatchUtils sInstance = null;
 
     private Context context;
+
+    private boolean isDebug = true;
+
+    private boolean isPatched = false;
 
     public static PatchUtils getInstance() {
         if (null == sInstance) {
@@ -73,10 +79,18 @@ public class PatchUtils {
                 }
             }
             if (f.exists()) {
-                if (InjectUtils.inject(context.getClassLoader(), f, false)) {
-                    Logger.i(TAG, "Hack Successfully.");
+                if (isDebug || SignUtils.checkSign(context, f.getAbsolutePath())) {
+                    synchronized (this) {
+                        if (InjectUtils.inject(context.getClassLoader(), f, false)) {
+                            Logger.i(TAG, "Hack Successfully.");
+                        } else {
+                            Logger.i(TAG, "Hack Failed.");
+                        }
+                    }
                 } else {
-                    Logger.i(TAG, "Hack Failed.");
+                    // should not reach here
+                    clearHack();
+                    Logger.e(TAG, "signature of hack.apk is not match");
                 }
             }
         } catch (Exception e) {
@@ -85,16 +99,52 @@ public class PatchUtils {
         }
     }
 
+    public void setDebug(boolean isDebugOn) {
+        isDebug = isDebugOn;
+    }
+
     public void patch() {
+        if (isPatched) return;
         File f = new File(getPatchName());
         if (f.exists()) {
-            if (InjectUtils.inject(context.getClassLoader(), f, true)) {
-                Logger.i(TAG, "Patch Successfully.");
+            if ((isDebug || SignUtils.checkSign(context, getPatchName()))) {
+                synchronized (this) {
+                    if (isPatched) return;
+                    if (InjectUtils.inject(context.getClassLoader(), f, true)) {
+                        isPatched = true;
+                        Logger.i(TAG, "Patch Successfully.");
+                    } else {
+                        Logger.i(TAG, "Patch Failed.");
+                    }
+                }
             } else {
-                Logger.i(TAG, "Patch Failed.");
+                clearPatch();
+                Logger.e(TAG, "signature of patch.apk is not match");
             }
         } else {
             Logger.i(TAG, "No Patch File.");
+        }
+    }
+
+    public void clearHack() {
+        File dir = new File(context.getFilesDir().getAbsolutePath() + File.separator + HACK_PATH);
+        if (dir.exists()) {
+            for (File file : dir.listFiles()) {
+                if (file.isFile()) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
+    public void clearPatch() {
+        File dir = new File(context.getFilesDir().getAbsolutePath() + File.separator + PATCH_PATH);
+        if (dir.exists()) {
+            for (File file : dir.listFiles()) {
+                if (file.isFile()) {
+                    file.delete();
+                }
+            }
         }
     }
 

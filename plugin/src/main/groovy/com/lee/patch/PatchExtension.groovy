@@ -32,4 +32,21 @@ class PatchExtension {
      * If false, compute classes which is different from the tag, and patch them into patch.apk
      */
     boolean makeTag = false
+
+    /**
+     * If true, patch is working
+     * If false, patch is no effect
+     */
+    boolean isEnable = true
+
+    /**
+     * if set sign configurations, the patch.apk will be signed
+     */
+    String keyStorePath = ""
+    String storePass = ""
+    String keyPass = ""
+    String alias = ""
+    String digestAlgorithm = ""
+    String signAlgorithm = ""
+
 }
